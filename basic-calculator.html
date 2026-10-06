@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Basic Calculator</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #f0f2f5;
+      font-family: Arial, sans-serif;
+    }
+
+    .calculator {
+      width: 320px;
+      padding: 20px;
+      border-radius: 18px;
+      background: #222;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .display {
+      width: 100%;
+      height: 80px;
+      margin-bottom: 15px;
+      padding: 15px;
+      border: none;
+      border-radius: 10px;
+      background: #111;
+      color: white;
+      font-size: 2rem;
+      text-align: right;
+      outline: none;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    button {
+      height: 60px;
+      border: none;
+      border-radius: 10px;
+      background: #444;
+      color: white;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.1s;
+    }
+
+    button:hover {
+      opacity: 0.85;
+    }
+
+    button:active {
+      transform: scale(0.95);
+    }
+
+    .operator {
+      background: #ff9500;
+    }
+
+    .clear {
+      background: #d9534f;
+    }
+
+    .equals {
+      background: #28a745;
+      grid-column: span 2;
+    }
+
+    .zero {
+      grid-column: span 2;
+    }
+  </style>
+</head>
+<body>
+
+  <main class="calculator">
+    <input
+      id="display"
+      class="display"
+      type="text"
+      value="0"
+      aria-label="Calculator display"
+      readonly
+    >
+
+    <div class="buttons">
+      <button class="clear" onclick="clearDisplay()">AC</button>
+      <button onclick="deleteLast()">DEL</button>
+      <button class="operator" onclick="chooseOperator('%')">%</button>
+      <button class="operator" onclick="chooseOperator('/')">÷</button>
+
+      <button onclick="inputNumber('7')">7</button>
+      <button onclick="inputNumber('8')">8</button>
+      <button onclick="inputNumber('9')">9</button>
+      <button class="operator" onclick="chooseOperator('*')">×</button>
+
+      <button onclick="inputNumber('4')">4</button>
+      <button onclick="inputNumber('5')">5</button>
+      <button onclick="inputNumber('6')">6</button>
+      <button class="operator" onclick="chooseOperator('-')">−</button>
+
+      <button onclick="inputNumber('1')">1</button>
+      <button onclick="inputNumber('2')">2</button>
+      <button onclick="inputNumber('3')">3</button>
+      <button class="operator" onclick="chooseOperator('+')">+</button>
+
+      <button class="zero" onclick="inputNumber('0')">0</button>
+      <button onclick="inputDecimal()">.</button>
+      <button class="equals" onclick="calculate()">=</button>
+    </div>
+  </main>
+
+  <script>
+    const display = document.getElementById("display");
+
+    let currentValue = "0";
+    let previousValue = null;
+    let operator = null;
+    let waitingForOperand = false;
+
+    function updateDisplay() {
+      display.value = currentValue;
+    }
+
+    function inputNumber(number) {
+      if (currentValue === "Error") {
+        clearDisplay();
+      }
+
+      if (waitingForOperand) {
+        currentValue = number;
+        waitingForOperand = false;
+      } else {
+        currentValue = currentValue === "0"
+          ? number
+          : currentValue + number;
+      }
+
+      updateDisplay();
+    }
+
+    function inputDecimal() {
+      if (currentValue === "Error") {
+        clearDisplay();
+      }
+
+      if (waitingForOperand) {
+        currentValue = "0.";
+        waitingForOperand = false;
+      } else if (!currentValue.includes(".")) {
+        currentValue += ".";
+      }
+
+      updateDisplay();
+    }
+
+    function chooseOperator(nextOperator) {
+      if (currentValue === "Error") return;
+
+      const inputValue = parseFloat(currentValue);
+
+      if (operator && waitingForOperand) {
+        operator = nextOperator;
+        return;
+      }
+
+      if (previousValue === null) {
+        previousValue = inputValue;
+      } else if (operator) {
+        const result = performCalculation(previousValue, inputValue, operator);
+
+        if (result === null) {
+          showError();
+          return;
+        }
+
+        currentValue = formatResult(result);
+        previousValue = result;
+        updateDisplay();
+      }
+
+      operator = nextOperator;
+      waitingForOperand = true;
+    }
+
+    function performCalculation(first, second, operation) {
+      switch (operation) {
+        case "+":
+          return first + second;
+        case "-":
+          return first - second;
+        case "*":
+          return first * second;
+        case "/":
+          return second === 0 ? null : first / second;
+        case "%":
+          return first % second;
+        default:
+          return second;
+      }
+    }
+
+    function calculate() {
+      if (operator === null || previousValue === null || currentValue === "Error") {
+        return;
+      }
+
+      const inputValue = parseFloat(currentValue);
+      const result = performCalculation(previousValue, inputValue, operator);
+
+      if (result === null || !Number.isFinite(result)) {
+        showError();
+        return;
+      }
+
+      currentValue = formatResult(result);
+      previousValue = null;
+      operator = null;
+      waitingForOperand = true;
+      updateDisplay();
+    }
+
+    function formatResult(number) {
+      if (!Number.isFinite(number)) return "Error";
+
+      // Avoid long floating-point results such as 0.1 + 0.2.
+      return Number(number.toPrecision(12)).toString();
+    }
+
+    function clearDisplay() {
+      currentValue = "0";
+      previousValue = null;
+      operator = null;
+      waitingForOperand = false;
+      updateDisplay();
+    }
+
+    function deleteLast() {
+      if (waitingForOperand || currentValue === "Error") return;
+
+      currentValue = currentValue.length > 1
+        ? currentValue.slice(0, -1)
+        : "0";
+
+      if (currentValue === "-") {
+        currentValue = "0";
+      }
+
+      updateDisplay();
+    }
+
+    function showError() {
+      currentValue = "Error";
+      previousValue = null;
+      operator = null;
+      waitingForOperand = true;
+      updateDisplay();
+    }
+
+    // Keyboard support
+    document.addEventListener("keydown", (event) => {
+      const key = event.key;
+
+      if (/^[0-9]$/.test(key)) {
+        inputNumber(key);
+      } else if (key === ".") {
+        inputDecimal();
+      } else if (["+", "-", "*", "/", "%"].includes(key)) {
+        chooseOperator(key);
+      } else if (key === "Enter" || key === "=") {
+        event.preventDefault();
+        calculate();
+      } else if (key === "Escape" || key.toLowerCase() === "c") {
+        clearDisplay();
+      } else if (key === "Backspace") {
+        deleteLast();
+      }
+    });
+  </script>
+
+</body>
+</html>
